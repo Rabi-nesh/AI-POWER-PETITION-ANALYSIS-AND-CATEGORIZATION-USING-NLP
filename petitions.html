@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petitions</title>
+<style>
+
+
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to right, #4facfe, #00f2fe);
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 20px;
+}
+
+.sidebar {
+  width: 200px;
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  height: fit-content;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.sidebar p {
+  cursor: pointer;
+  margin: 10px 0;
+  padding: 8px;
+  border-radius: 10px;
+  transition: 0.3s;
+  color: #4facfe;
+  font-weight: bold;
+}
+
+.sidebar p:hover {
+  background: #4facfe;
+  color: white;
+}
+
+.sidebar p.active {
+  background: #007bff;
+  color: white;
+}
+
+.main {
+  flex: 1;
+}
+
+.petition {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+.petition h4 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+.badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: white;
+}
+
+.badge.duplicate {
+  background: orange;
+}
+
+.badge.priority {
+  background: #007bff;
+}
+
+.like-comment {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.like-comment button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #4facfe;
+  color: white;
+  font-size: 14px;
+  transition: 0.3s;
+}
+
+.like-comment button:hover {
+  background: #007bff;
+}
+
+.comment-box {
+  margin-top: 10px;
+  display: flex;
+  gap: 5px;
+}
+
+.comment-box input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.comment-box button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #4facfe;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s;
+}
+
+.comment-box button:hover {
+  background: #007bff;
+}
+</style>
+
+</head>
+<body>
+<div class="container">
+<div class="sidebar">
+<h3>Filter</h3>
+<p id="filterAll" class="active">All Petitions</p>
+<p id="filterHigh">Priority: High</p>
+<p id="filterDuplicate">Duplicates</p>
+</div>
+<div class="main" id="petitionsContainer"></div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+const user_id = localStorage.getItem('user_id');  
+const container = document.getElementById('petitionsContainer');
+let petitionsData = [];
+let currentFilter = 'all';
+
+async function loadPetitions(){
+    const res = await fetch('http://127.0.0.1:5000/api/petitions', {
+        headers:{'Authorization':'Bearer '+token}
+    });
+    const data = await res.json();
+    petitionsData = data.petitions;
+    renderPetitions();
+}
+
+function renderPetitions(){
+    container.innerHTML = '';
+    let filtered = petitionsData;
+
+    // ✅ FILTER FIX: Hide Solved petitions in "All Petitions"
+    if(currentFilter==='all') filtered = filtered.filter(p => p.status !== "Solved");
+    else if(currentFilter==='high') filtered = filtered.filter(p=>p.priority==='High' && p.status !== "Solved");
+    else if(currentFilter==='duplicate') filtered = filtered.filter(p=>p.is_duplicate && p.status !== "Solved");
+
+    filtered.forEach(p=>{
+        if(p.is_private) return;
+
+        const alreadyCommented = p.comments.some(c => c.user == user_id);
+
+        let commentsHTML = "";
+        p.comments.forEach(c=>{
+            commentsHTML += `<p><strong>User ${c.user}:</strong> ${c.comment}</p>`;
+        });
+
+        const div=document.createElement('div');
+        div.className='petition';
+        div.innerHTML=`
+        <h4>${p.title}</h4>
+        <p><strong>Name:</strong> ${p.name}</p>
+        <p><strong>Phone:</strong> ${p.phone}</p>
+        <p><strong>Address:</strong> ${p.address}</p>
+        <p><strong>Description:</strong> ${p.description}</p>
+
+        <p><strong>Status:</strong> ${p.status || "Unsolved"}</p>
+
+        <p><strong>Sentiment:</strong> ${p.sentiment} | <strong>Urgency:</strong> ${p.urgency} | <strong>Priority:</strong> ${p.priority}</p>
+
+        ${p.is_duplicate ? '<span class="badge duplicate">Duplicate</span>' : ''}
+        ${p.priority==='High' ? '<span class="badge priority">Priority</span>' : ''}
+
+        <div class="like-comment">
+            <button data-id="${p.id}" class="likeBtn">${p.liked_by_user?'Liked':'Like'} (${p.likes})</button>
+        </div>
+
+        <div class="comment-box">
+            <input type="text" placeholder="Add comment" id="comment-${p.id}" ${alreadyCommented?'disabled':''}>
+            <button data-id="${p.id}" class="commentBtn">Comment</button>
+        </div>
+
+        <div><strong>Comments:</strong>${commentsHTML}</div>
+        `;
+        container.appendChild(div);
+    });
+
+    attachEvents();
+}
+
+function attachEvents(){
+    document.querySelectorAll('.likeBtn').forEach(btn=>{
+        btn.onclick=async()=>{
+            const pid=btn.dataset.id;
+            const res=await fetch(`http://127.0.0.1:5000/api/petition/${pid}/like`,{
+                method:'POST',
+                headers:{'Authorization':'Bearer '+token}
+            });
+            const data=await res.json();
+            if(res.ok) loadPetitions();
+            else alert(data.error);
+        }
+    });
+
+    document.querySelectorAll('.commentBtn').forEach(btn=>{
+        btn.onclick=async()=>{
+            const pid=btn.dataset.id;
+            const input=document.getElementById(`comment-${pid}`);
+            const comment=input.value.trim();
+            if(!comment) return alert("Enter comment");
+
+            const res=await fetch(`http://127.0.0.1:5000/api/petition/${pid}/comment`,{
+                method:'POST',
+                headers:{
+                    'Authorization':'Bearer '+token,
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({comment})
+            });
+            const data=await res.json();
+            if(res.ok) loadPetitions();
+            else alert(data.error);
+        }
+    });
+}
+
+document.getElementById('filterAll').onclick = ()=>{
+    currentFilter='all';
+    setActiveFilter('filterAll');
+    renderPetitions();
+};
+document.getElementById('filterHigh').onclick = ()=>{
+    currentFilter='high';
+    setActiveFilter('filterHigh');
+    renderPetitions();
+};
+document.getElementById('filterDuplicate').onclick = ()=>{
+    currentFilter='duplicate';
+    setActiveFilter('filterDuplicate');
+    renderPetitions();
+};
+
+function setActiveFilter(id){
+    document.querySelectorAll('.sidebar p').forEach(p=>p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+loadPetitions();
+</script>
+</body>
+</html>

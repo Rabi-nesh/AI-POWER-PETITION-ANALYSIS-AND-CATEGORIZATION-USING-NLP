@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Petition System - Home</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #43cea2, #185a9d);
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      text-align: center;
+      padding: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      margin-top: 50px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    .card {
+      background: white;
+      color: #333;
+      border-radius: 15px;
+      width: 250px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      font-weight: bold;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .logout-btn {
+      position: fixed;
+      bottom: 30px;
+      background: #ff4b5c;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #e63946;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 5px;
+      font-size: 13px;
+      color: #eee;
+    }
+  </style>
+</head>
+<body>
+  <header>Welcome to the Petition System</header>
+
+  <div class="container">
+    <div class="card" id="submitPetition">📝 Submit Petition</div>
+    <div class="card" id="viewPetitions">📋 Petition List</div>
+    <div class="card" id="dashboard">📊 Dashboard</div>
+    <div class="card" id="adminPanel">⚙️ Admin Panel</div>
+  </div>
+
+  <button class="logout-btn" id="logoutBtn">Logout</button>
+
+  <footer>© 2025 Petition System</footer>
+
+  <script>
+    // Redirect if not logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login first');
+      window.location.href = 'index.html';
+    }
+
+    // Navigation actions
+    document.getElementById('submitPetition').addEventListener('click', () => {
+      window.location.href = 'submit.html';
+    });
+
+    document.getElementById('viewPetitions').addEventListener('click', () => {
+      window.location.href = 'petitions.html';
+    });
+
+    document.getElementById('dashboard').addEventListener('click', () => {
+      window.location.href = 'dashboard.html';
+    });
+
+    document.getElementById('adminPanel').addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      alert('You have been logged out.');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

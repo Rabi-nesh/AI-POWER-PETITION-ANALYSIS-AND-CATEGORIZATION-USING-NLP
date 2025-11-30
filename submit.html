@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Petition</title>
+<style>
+body { font-family: Arial, sans-serif; background: linear-gradient(to right, #4facfe, #00f2fe); margin:0; padding:0; }
+.container { width: 500px; background:white; padding:30px; border-radius:15px; margin:40px auto; box-shadow:0 4px 10px rgba(0,0,0,0.2); }
+h2{color:#333;}
+input, button, select { width:95%; padding:10px; margin:8px 0; border-radius:8px; border:1px solid #ccc; font-size:14px;}
+button{background-color:#4facfe;color:white;border:none;cursor:pointer;transition:0.3s;}
+button:hover{background-color:#007bff;}
+.hidden{display:none;}
+#preview img{max-width:100%; margin-top:10px;}
+#descBox{margin-top:10px;padding:8px;background:#f0f0f0;border-radius:5px;}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Submit Petition</h2>
+
+<!-- Step 1 -->
+<div id="step1">
+<input type="text" id="title" placeholder="Petition Title">
+<input type="text" id="name" placeholder="Your Name">
+<input type="text" id="phone" placeholder="Phone Number">
+<input type="text" id="address" placeholder="Address">
+<button id="next1">Next</button>
+</div>
+
+<!-- Step 2 -->
+<div id="step2" class="hidden">
+<button id="privateBtn">Private</button>
+<button id="publicBtn">Public</button>
+<button id="back2">Back</button>
+</div>
+
+<!-- Step 3 -->
+<div id="step3" class="hidden">
+<button id="pdfBtn">Upload PDF</button>
+<button id="imageBtn">Upload Image</button>
+<button id="back3">Back</button>
+</div>
+
+<!-- PDF Upload -->
+<div id="pdfUpload" class="hidden">
+<input type="file" id="pdfFile" accept=".pdf">
+<button id="submitPdf">Submit PDF Petition</button>
+<button id="backPdf">Back</button>
+</div>
+
+<!-- Image Upload -->
+<div id="imageUpload" class="hidden">
+<input type="file" id="imageFile" accept="image/*">
+<div id="preview"></div>
+<div id="descBox" class="hidden"></div>
+<button id="submitImage" class="hidden">Submit Image Petition</button>
+<button id="backImg">Back</button>
+</div>
+</div>
+
+<script>
+const step1=document.getElementById('step1'), step2=document.getElementById('step2'), step3=document.getElementById('step3');
+const pdfUpload=document.getElementById('pdfUpload'), imageUpload=document.getElementById('imageUpload');
+let isPrivate=false;
+
+document.getElementById('next1').onclick=()=>{if(!document.getElementById('title').value.trim()) return alert("Enter title!"); step1.classList.add('hidden'); step2.classList.remove('hidden');}
+document.getElementById('privateBtn').onclick=()=>goStep3(true);
+document.getElementById('publicBtn').onclick=()=>goStep3(false);
+document.getElementById('back2').onclick=()=>{step2.classList.add('hidden'); step1.classList.remove('hidden');};
+document.getElementById('back3').onclick=()=>{step3.classList.add('hidden'); step2.classList.remove('hidden');};
+document.getElementById('pdfBtn').onclick=()=>{step3.classList.add('hidden'); pdfUpload.classList.remove('hidden');}
+document.getElementById('imageBtn').onclick=()=>{step3.classList.add('hidden'); imageUpload.classList.remove('hidden');}
+document.getElementById('backPdf').onclick=()=>{pdfUpload.classList.add('hidden'); step3.classList.remove('hidden');}
+document.getElementById('backImg').onclick=()=>{imageUpload.classList.add('hidden'); step3.classList.remove('hidden');}
+
+function goStep3(privateFlag){isPrivate=privateFlag; step2.classList.add('hidden'); step3.classList.remove('hidden');}
+
+// PDF submission
+document.getElementById('submitPdf').onclick=async()=>{
+  const file=document.getElementById('pdfFile').files[0];
+  if(!file) return alert("Choose PDF!");
+  const formData=new FormData();
+  formData.append('pdf', file);
+  formData.append('title', document.getElementById('title').value);
+  formData.append('name', document.getElementById('name').value);
+  formData.append('phone', document.getElementById('phone').value);
+  formData.append('address', document.getElementById('address').value);
+  formData.append('is_private', isPrivate);
+
+  const token=localStorage.getItem('token');
+  const res=await fetch('http://127.0.0.1:5000/api/petitions',{method:'POST', body:formData, headers:{'Authorization':'Bearer '+token}});
+  if(res.ok){alert("Petition submitted!"); window.location.href="petitions.html";}
+  else{const data=await res.json(); alert("Error submitting petition: "+(data.error||data.msg));}
+}
+
+// Image upload
+document.getElementById('imageFile').onchange=async function(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=event=>document.getElementById('preview').innerHTML=`<img src="${event.target.result}">`;
+  reader.readAsDataURL(file);
+
+  const formData=new FormData();
+  formData.append('file', file);
+  const token=localStorage.getItem('token');
+  try{
+    const res=await fetch('http://127.0.0.1:5000/api/analyze-image',{method:'POST', body:formData});
+    const data=await res.json();
+    if(res.ok){
+      document.getElementById('descBox').classList.remove('hidden');
+      document.getElementById('descBox').textContent=data.description;
+      document.getElementById('submitImage').classList.remove('hidden');
+    } else {document.getElementById('descBox').textContent="Analysis failed";}
+  }catch{document.getElementById('descBox').textContent="Server error";}
+}
+
+// Submit image petition
+document.getElementById('submitImage').onclick=async()=>{
+  const desc=document.getElementById('descBox').textContent;
+  const formData=new FormData();
+  formData.append('image', document.getElementById('imageFile').files[0]);
+  formData.append('description', desc);
+  formData.append('title', document.getElementById('title').value);
+  formData.append('name', document.getElementById('name').value);
+  formData.append('phone', document.getElementById('phone').value);
+  formData.append('address', document.getElementById('address').value);
+  formData.append('is_private', isPrivate);
+
+  const token=localStorage.getItem('token');
+  const res=await fetch('http://127.0.0.1:5000/api/petitions',{method:'POST', body:formData, headers:{'Authorization':'Bearer '+token}});
+  if(res.ok){alert("Petition submitted!"); window.location.href="petitions.html";}
+  else{const data=await res.json(); alert("Error submitting petition: "+(data.error||data.msg));}
+}
+</script>
+</body>
+</html>
